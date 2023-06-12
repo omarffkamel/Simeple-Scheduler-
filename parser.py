@@ -1,5 +1,6 @@
 result = lambda p: p[0][0]
-rest   = lambda p: p[0][1]
+rest = lambda p: p[0][1]
+
 
 def digits_to_int(digits):
     return int(''.join(digits))
@@ -19,21 +20,14 @@ class Parser:
 
     def __xor__(self, other):
         return OrElse(self, other)
-    
+
     def parse(self, inp):
-        return self.parser.parse(inp)
+        raise NotImplementedError("Subclasses must implement the parse method.")
 
-
-            
-    
-########################################
-# Core combinators:                    #
-# they override the function "parse".  #
-########################################
 
 class Seq(Parser):
     def __init__(self, parser, and_then):
-        self.parser   = parser
+        self.parser = parser
         self.and_then = and_then
 
     def parse(self, inp):
@@ -42,6 +36,7 @@ class Seq(Parser):
             return self.and_then(result(p)).parse(rest(p))
 
         return []
+
 
 class OrElse(Parser):
     def __init__(self, parser1, parser2):
@@ -55,23 +50,27 @@ class OrElse(Parser):
 
         return self.parser2.parse(inp)
 
+
 class ParseItem(Parser):
     def parse(self, inp):
         if inp == "":
             return []
         return [(inp[0], inp[1:])]
 
+
 class Return(Parser):
     def __init__(self, x):
         self.x = x
-        
+
     def parse(self, inp):
         return [(self.x, inp)]
+
 
 class Fail(Parser):
     def parse(self, inp):
         return []
-    
+
+
 ###############################
 # Below this line, no parsers #
 # may override "parse".       #
@@ -80,16 +79,24 @@ class Fail(Parser):
 # Generic combinators
 
 class ParseSome(Parser):
-    def __init__(self, parser):                             # E.g., parser = ParseDigit(), inp = "89a"
+    def __init__(self, parser):
         self.parser = parser >> (lambda x: \
                                  (ParseSome(parser) ^ Return([])) >> (lambda xs: \
                                  Return(cons(x, xs))))
 
+    def parse(self, inp):
+        return self.parser.parse(inp)
+
+
 class ParseIf(Parser):
     def __init__(self, pred):
-        self.pred   = pred
+        self.pred = pred
         self.parser = ParseItem() >> (lambda c: \
                                       Return(c) if self.pred(c) else Fail())
+
+    def parse(self, inp):
+        return self.parser.parse(inp)
+
 
 class ParseChar(Parser):
     """
@@ -100,9 +107,14 @@ class ParseChar(Parser):
     >>> ParseChar('a').parse("abc")
     [('a', 'bc')]
     """
+
     def __init__(self, c):
         self.parser = ParseIf(lambda x: c == x)
-        
+
+    def parse(self, inp):
+        return self.parser.parse(inp)
+
+
 class ParseDigit(Parser):
     """
     >>> ParseDigit().parse("89abc")
@@ -110,16 +122,22 @@ class ParseDigit(Parser):
     >>> ParseDigit().parse("a89b")
     []
     """
+
     def __init__(self):
         self.parser = ParseIf(lambda c: c in "0123456789")
 
-        
+    def parse(self, inp):
+        return self.parser.parse(inp)
+
+
 class ParsePositiveInteger(Parser):
     def __init__(self):
         super().__init__()
         # Convert list of digits to an integer
         self.parser = ParseSome(ParseDigit()) >> (lambda digits: Return(digits_to_int(digits)))
 
+    def parse(self, inp):
+        return self.parser.parse(inp)
 
 
 class ParseSpace(Parser):
@@ -127,23 +145,32 @@ class ParseSpace(Parser):
         super().__init__()
         self.parser = ParseSome(ParseChar(' '))
 
+    def parse(self, inp):
+        return self.parser.parse(inp)
+
 
 class ParseNewline(Parser):
     def __init__(self):
         super().__init__()
         self.parser = ParseSome(ParseChar('\n'))
 
+    def parse(self, inp):
+        return self.parser.parse(inp)
+
 
 class ParseNameOfTask(Parser):
     def __init__(self):
         super().__init__()
-        self.parser = (ParseChar('T') >> 
-                       lambda _: ParseChar('a') >> 
-                       lambda _: ParseChar('s') >> 
+        self.parser = (ParseChar('T') >>
+                       lambda _: ParseChar('a') >>
+                       lambda _: ParseChar('s') >>
                        lambda _: ParseChar('k') >>
                        lambda _: (ParsePositiveInteger() ^ Return('')) >>
                        lambda n: (ParseSpace() ^ ParseNewline()) >>
                        lambda _: Return('Task' + str(n)))
+
+    def parse(self, inp):
+        return self.parser.parse(inp)
 
 
 class ParseTask(Parser):
@@ -166,9 +193,16 @@ class ParseTask(Parser):
                        lambda dependency: ParseNewline() >>
                        lambda _: Return((name, duration, dependency)))
 
+    def parse(self, inp):
+        return self.parser.parse(inp)
+
+
 class ParseListOfTasks(Parser):
     def __init__(self):
         super().__init__()
         self.parser = ((ParseTask() >>
-                       lambda task: (ParseListOfTasks() ^ Return([])) >>
-                       lambda rest: Return(cons(task, rest))) ^ Return([]))
+                        lambda task: (ParseListOfTasks() ^ Return([])) >>
+                        lambda rest: Return(cons(task, rest))) ^ Return([]))
+
+    def parse(self, inp):
+        return self.parser.parse(inp)
