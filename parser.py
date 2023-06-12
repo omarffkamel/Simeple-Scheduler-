@@ -162,12 +162,13 @@ class ParseNameOfTask(Parser):
     def __init__(self):
         super().__init__()
         self.parser = (ParseChar('T') >>
-                       lambda _: ParseChar('a') >>
-                       lambda _: ParseChar('s') >>
-                       lambda _: ParseChar('k') >>
-                       lambda _: (ParsePositiveInteger() ^ Return('')) >>
-                       lambda n: (ParseSpace() ^ ParseNewline()) >>
-                       lambda _: Return('Task' + str(n)))
+                       (lambda _: ParseChar('a')) >>
+                       (lambda _: ParseChar('s')) >>
+                       (lambda _: ParseChar('k')) >>
+                       (lambda _: ParsePositiveInteger()) >>
+                       (lambda n: (ParseSpace() ^ ParseNewline()) >>
+                       (lambda _: Return('Task' + str(n)))))
+
 
     def parse(self, inp):
         return self.parser.parse(inp)
@@ -177,21 +178,26 @@ class ParseTask(Parser):
     def __init__(self):
         super().__init__()
         self.parser = (ParseNameOfTask() >>
-                       lambda name: ParseChar('t') >>
-                       lambda _: ParseChar('a') >>
-                       lambda _: ParseChar('k') >>
-                       lambda _: ParseChar('e') >>
-                       lambda _: ParseChar('s') >>
-                       lambda _: ParseSpace() >>
-                       lambda _: ParsePositiveInteger() >>
-                       lambda duration: ParseChar('n') >>
-                       lambda _: ParseChar('e') >>
-                       lambda _: ParseChar('d') >>
-                       lambda _: ParseChar('s') >>
-                       lambda _: ParseSpace() >>
-                       lambda _: (ParsePositiveInteger() ^ Return('')) >>
-                       lambda dependency: ParseNewline() >>
-                       lambda _: Return((name, duration, dependency)))
+                       (lambda name: ParseChar('t') >>
+                       (lambda _: ParseChar('a') >>
+                       (lambda _: ParseChar('k') >>
+                       (lambda _: ParseChar('e') >>
+                       (lambda _: ParseChar('s') >>
+                       (lambda _: ParseSpace()) >>
+                       (lambda _: ParsePositiveInteger()) >>
+                       (lambda duration: ParseChar('n') >>
+                       (lambda _: ParseChar('e') >>
+                       (lambda _: ParseChar('d') >>
+                       (lambda _: ParseChar('s') >>
+                       (lambda _: ParseSpace()) >>
+                       (lambda _: (ParsePositiveInteger() ^ Return('')) >>
+                       (lambda dependency: ParseNewline() >>
+                       (lambda _: Return((name, duration, dependency)))))))))))))))
+
+
+
+
+
 
     def parse(self, inp):
         return self.parser.parse(inp)
@@ -200,9 +206,10 @@ class ParseTask(Parser):
 class ParseListOfTasks(Parser):
     def __init__(self):
         super().__init__()
-        self.parser = ((ParseTask() >>
-                        lambda task: (ParseListOfTasks() ^ Return([])) >>
-                        lambda rest: Return(cons(task, rest))) ^ Return([]))
+        self.parser = (ParseTask() >>
+                        (lambda task: ParseListOfTasks() ^ Return([])) >>
+                        (lambda rest: Return(cons(task, rest))) ^ Return([]))
 
     def parse(self, inp):
         return self.parser.parse(inp)
+
